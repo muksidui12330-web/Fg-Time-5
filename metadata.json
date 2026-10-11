@@ -1,0 +1,10 @@
+{
+  "name": "FG TIME",
+  "description": "A vibrant social media web application with green leaf branding, posts, stories, reels, messaging, profiles, and community interactions.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
