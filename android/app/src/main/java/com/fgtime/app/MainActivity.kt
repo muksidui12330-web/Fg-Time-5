@@ -93,8 +93,15 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        // Determine launch URL: custom domain or local bundle
-        val launchUrl = intent.dataString ?: "https://fgtime.app"
+        // Determine launch URL: check for bundled local index.html or live host
+        val hasLocalBundle = try {
+            assets.open("index.html").close()
+            true
+        } catch (e: Exception) {
+            false
+        }
+        val defaultUrl = if (hasLocalBundle) "file:///android_asset/index.html" else "https://fgtime.app"
+        val launchUrl = intent.dataString ?: defaultUrl
         webView.loadUrl(launchUrl)
     }
 
@@ -115,7 +122,7 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
                 // Keep internal app navigations in WebView
-                if (url.contains("fgtime.app") || url.startsWith("http://localhost") || url.startsWith("https://localhost")) {
+                if (url.contains("fgtime.app") || url.startsWith("file:///android_asset/") || url.startsWith("http://localhost") || url.startsWith("https://localhost")) {
                     return false
                 }
                 // Open external links in device browser
