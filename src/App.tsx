@@ -14,6 +14,7 @@ import { ExploreView } from './components/ExploreView';
 import { MessagesView } from './components/MessagesView';
 import { NotificationsView } from './components/NotificationsView';
 import { ProfileView } from './components/ProfileView';
+import { CoupleSpaceView } from './components/CoupleSpaceView';
 import { SettingsModal } from './components/SettingsModal';
 import { ReportModal } from './components/ReportModal';
 import { AuthModal } from './components/AuthModal';
@@ -28,8 +29,9 @@ import {
   searchUsers,
   toggleFollowUser,
   checkIsFollowing,
+  INITIAL_CURATED_POSTS,
 } from './services/firestoreService';
-import { Sparkles, Sprout, Plus, UserPlus, Flame } from 'lucide-react';
+import { Sparkles, Sprout, Plus, UserPlus, Flame, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
@@ -37,6 +39,8 @@ const MainApp: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [currentTab, setCurrentTab] = useState<NavTab>('feed');
   const [posts, setPosts] = useState<PostItem[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [feedFilter, setFeedFilter] = useState<'all' | 'following' | 'suggested'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
@@ -79,11 +83,28 @@ const MainApp: React.FC = () => {
       });
   }, [currentUser]);
 
-  // Subscribe to posts
+  // Subscribe to live posts with fallback to curated posts
   useEffect(() => {
-    const unsub = subscribePosts((fetchedPosts) => {
-      setPosts(fetchedPosts);
-    }, categoryFilter === 'all' ? undefined : categoryFilter);
+    setIsLoadingPosts(true);
+    setFeedError(null);
+    const unsub = subscribePosts(
+      (fetchedPosts) => {
+        if (fetchedPosts && fetchedPosts.length > 0) {
+          setPosts(fetchedPosts);
+        } else {
+          // If Firestore is empty, show curated nature starter posts
+          setPosts(INITIAL_CURATED_POSTS);
+        }
+        setIsLoadingPosts(false);
+      },
+      categoryFilter === 'all' ? undefined : categoryFilter,
+      (err) => {
+        console.warn('Feed load error:', err);
+        setFeedError('Unable to connect to live feed. Displaying verified local moments.');
+        setPosts((prev) => (prev.length > 0 ? prev : INITIAL_CURATED_POSTS));
+        setIsLoadingPosts(false);
+      }
+    );
     return () => unsub();
   }, [categoryFilter]);
 
@@ -302,7 +323,45 @@ const MainApp: React.FC = () => {
 
               {/* Feed Stream */}
               <div className="flex flex-col gap-4 mt-2">
-                {displayPosts.length > 0 ? (
+                {feedError && (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+                      <span>{feedError}</span>
+                    </div>
+                    <button
+                      onClick={() => setCategoryFilter(categoryFilter)}
+                      className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-bold flex items-center gap-1 text-[11px] cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Sync</span>
+                    </button>
+                  </div>
+                )}
+
+                {isLoadingPosts ? (
+                  <div className="flex flex-col gap-4">
+                    {[1, 2].map((s) => (
+                      <div
+                        key={s}
+                        className="bg-white dark:bg-[#12372A]/80 rounded-3xl p-4 border border-[#00C853]/15 shadow-sm animate-pulse flex flex-col gap-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#00C853]/20" />
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <div className="w-28 h-3 rounded bg-stone-200 dark:bg-emerald-900/40" />
+                            <div className="w-20 h-2.5 rounded bg-stone-100 dark:bg-emerald-900/20" />
+                          </div>
+                        </div>
+                        <div className="w-full h-4 rounded bg-stone-100 dark:bg-emerald-900/30" />
+                        <div className="w-4/5 h-4 rounded bg-stone-100 dark:bg-emerald-900/20" />
+                        <div className="w-full h-56 rounded-2xl bg-[#00C853]/10 flex items-center justify-center">
+                          <Sprout className="w-8 h-8 text-[#00C853]/30" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : displayPosts.length > 0 ? (
                   displayPosts.map((post, idx) => (
                     <React.Fragment key={post.id}>
                       <PostCard
@@ -431,16 +490,26 @@ const MainApp: React.FC = () => {
             />
           )}
 
+          {currentTab === 'couple' && (
+            <CoupleSpaceView
+              onOpenMessageWithUser={(uId) => handleOpenMessageWithUser(uId)}
+              onOpenUserProfile={(uId) => handleOpenUserProfile(uId)}
+              onRequireAuth={() => setIsAuthModalOpen(true)}
+            />
+          )}
+
           {currentTab === 'messages' && (
             <MessagesView
               initialTargetUserId={targetMessageUserId}
               onOpenUserProfile={(uId) => handleOpenUserProfile(uId)}
+              onOpenCoupleSpace={() => setCurrentTab('couple')}
             />
           )}
 
           {currentTab === 'notifications' && (
             <NotificationsView
               onOpenUserProfile={(uId) => handleOpenUserProfile(uId)}
+              onOpenCoupleSpace={() => setCurrentTab('couple')}
             />
           )}
 
@@ -451,6 +520,7 @@ const MainApp: React.FC = () => {
               onOpenReportPost={(pId) => setReportingPostId(pId)}
               onRequireAuth={() => setIsAuthModalOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenCoupleSpace={() => setCurrentTab('couple')}
             />
           )}
         </main>

@@ -16,10 +16,12 @@ import {
 
 interface NotificationsViewProps {
   onOpenUserProfile?: (userId: string) => void;
+  onOpenCoupleSpace?: () => void;
 }
 
 export const NotificationsView: React.FC<NotificationsViewProps> = ({
   onOpenUserProfile,
+  onOpenCoupleSpace,
 }) => {
   const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -54,6 +56,10 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
         return <MessageCircle className="w-4 h-4 text-teal-500" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-[#00C853]" />;
+      case 'couple_request':
+        return <Heart className="w-4 h-4 text-pink-500 fill-pink-500 animate-pulse" />;
+      case 'couple_accepted':
+        return <Sparkles className="w-4 h-4 text-pink-500" />;
       default:
         return <Sparkles className="w-4 h-4 text-[#00C853]" />;
     }
@@ -67,6 +73,10 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
         return 'commented on your sprout 🌱';
       case 'follow':
         return 'started following your garden 🍃';
+      case 'couple_request':
+        return 'invited you to connect as a couple on FG TIME 🌸💖';
+      case 'couple_accepted':
+        return 'accepted your couple invitation! Your hearts are linked 💍🌿';
       default:
         return 'interacted with your content ✨';
     }
@@ -98,7 +108,12 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
           notifications.map((n) => (
             <div
               key={n.id}
-              onClick={() => handleMarkRead(n.id)}
+              onClick={() => {
+                handleMarkRead(n.id);
+                if ((n.type === 'couple_request' || n.type === 'couple_accepted') && onOpenCoupleSpace) {
+                  onOpenCoupleSpace();
+                }
+              }}
               className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
                 n.read
                   ? 'bg-white dark:bg-[#12372A]/40 border-stone-100 dark:border-emerald-800/30'

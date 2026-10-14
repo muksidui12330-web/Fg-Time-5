@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, Film, User, PlusCircle, Music } from 'lucide-react';
+import { Home, Compass, Film, User, PlusCircle, Music, Heart } from 'lucide-react';
 import { NavTab } from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 
@@ -73,6 +73,18 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       >
         <Music className="w-5 h-5" />
         <span className="text-[10px]">Studio</span>
+      </button>
+
+      <button
+        onClick={() => onTabChange('couple')}
+        className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all cursor-pointer ${
+          currentTab === 'couple'
+            ? 'text-pink-500 font-bold scale-105'
+            : 'text-stone-500 dark:text-stone-400'
+        }`}
+      >
+        <Heart className={`w-5 h-5 ${currentTab === 'couple' ? 'fill-pink-500 text-pink-500' : ''}`} />
+        <span className="text-[10px]">Couple</span>
       </button>
 
       <button

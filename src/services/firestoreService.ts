@@ -29,19 +29,58 @@ import {
   MessageItem,
   NotificationItem,
   ReportItem,
+  CoupleItem,
+  LoveMemoryItem,
+  LoveNoteItem,
+  RelationshipMilestone,
 } from '../types';
 
 // ==================== POSTS ====================
 
 export function subscribePosts(
   callback: (posts: PostItem[]) => void,
-  categoryFilter?: string
+  categoryFilter?: string,
+  onError?: (err: Error) => void
 ) {
   const postsRef = collection(db, 'posts');
-  let q = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
-  if (categoryFilter && categoryFilter !== 'all') {
-    q = query(postsRef, where('category', '==', categoryFilter), orderBy('createdAt', 'desc'), limit(50));
-  }
+  // Order by createdAt descending (uses single-field index)
+  const q = query(postsRef, orderBy('createdAt', 'desc'), limit(60));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      let posts: PostItem[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<PostItem, 'id'>),
+      }));
+
+      // In-memory category filter prevents missing composite index errors
+      if (categoryFilter && categoryFilter !== 'all') {
+        posts = posts.filter((p) => p.category === categoryFilter);
+      }
+      callback(posts);
+    },
+    (error) => {
+      console.warn('[FG TIME] subscribePosts snapshot warning:', error);
+      if (onError) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      } else {
+        callback([]);
+      }
+    }
+  );
+}
+
+/**
+ * Dedicated subscription for author posts to guarantee all of a user's posts
+ * load reliably on their profile without being cut off by the global feed limit.
+ */
+export function subscribeUserPosts(
+  authorId: string,
+  callback: (posts: PostItem[]) => void
+) {
+  const postsRef = collection(db, 'posts');
+  const q = query(postsRef, where('authorId', '==', authorId));
 
   return onSnapshot(
     q,
@@ -50,10 +89,12 @@ export function subscribePosts(
         id: d.id,
         ...(d.data() as Omit<PostItem, 'id'>),
       }));
+      posts.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       callback(posts);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'posts');
+      console.warn('[FG TIME] subscribeUserPosts warning for:', authorId, error);
+      callback([]);
     }
   );
 }
@@ -813,7 +854,7 @@ export function subscribeUserConversations(
   callback: (conversations: ConversationItem[]) => void
 ) {
   const convRef = collection(db, 'conversations');
-  const q = query(convRef, where('participants', 'array-contains', userId), orderBy('updatedAt', 'desc'));
+  const q = query(convRef, where('participants', 'array-contains', userId));
 
   return onSnapshot(
     q,
@@ -822,10 +863,13 @@ export function subscribeUserConversations(
         id: d.id,
         ...(d.data() as Omit<ConversationItem, 'id'>),
       }));
+      // In-memory sort avoids composite index requirement
+      items.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
       callback(items);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'conversations');
+      console.warn('[FG TIME] subscribeUserConversations warning:', error);
+      callback([]);
     }
   );
 }
@@ -1103,19 +1147,79 @@ export async function unblockUser(
 
 // ==================== SEED INITIAL COMMUNITY ====================
 
+export const INITIAL_CURATED_POSTS: PostItem[] = [
+  {
+    id: 'post-welcome-verdant',
+    authorId: 'fg_botanist_system',
+    authorName: 'Aria Verdant',
+    authorUsername: 'aria_leaf',
+    authorPhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    content: 'Welcome to FG TIME! 🌿 Sprouting a community grounded in nature, mindfulness, and green living. Take a deep breath, share your green spaces, and let roots connect us all.',
+    imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=1200&auto=format&fit=crop&q=80',
+    music: {
+      title: 'Forest Sunlight Melody',
+      artist: 'FG TIME Ambient Records',
+      audioUrl: '/audio/forest-sunlight-melody.mp3',
+    },
+    tags: ['#FGTime', '#WelcomeRoots', '#GreenLiving', '#FloraCommunity'],
+    category: 'nature',
+    likesCount: 24,
+    commentsCount: 3,
+    sharesCount: 5,
+    savesCount: 8,
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: 'post-stream-clip',
+    authorId: 'fg_forest_guide',
+    authorName: 'Kai Greenwood',
+    authorUsername: 'kai_forest',
+    authorPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    content: 'Watch the gentle forest sunlight stream through the ancient mossy oaks. Tap the clip to immerse yourself in the natural river frequency 🌲💧',
+    imageUrl: '/videos/forest-stream.mp4',
+    mediaType: 'video',
+    music: {
+      title: 'Dewdrop Stream Flow',
+      artist: 'Botanical Waves',
+      audioUrl: '/audio/dewdrop-stream-flow.mp3',
+    },
+    tags: ['#ForestVibes', '#RiverMelody', '#MorningWalk', '#PlantSanctuary'],
+    category: 'vibes',
+    likesCount: 42,
+    commentsCount: 6,
+    sharesCount: 12,
+    savesCount: 15,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'post-monstera-propagation',
+    authorId: 'fg_urban_sprout',
+    authorName: 'Mira Patel',
+    authorUsername: 'mira_urbanplants',
+    authorPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    content: 'Transplanted my Monstera Deliciosa cuttings today! Look at those healthy root nodules thriving in leca clay pebbles. Sustainable balcony gardening is pure therapy 🌱🏡',
+    imageUrl: 'https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=1200&auto=format&fit=crop&q=80',
+    tags: ['#UrbanJungle', '#Monstera', '#IndoorPlants', '#GreenThumb'],
+    category: 'green-tech',
+    likesCount: 19,
+    commentsCount: 2,
+    sharesCount: 3,
+    savesCount: 7,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export async function seedCommunityDataIfEmpty(currentUserProfile?: UserProfile | null) {
+  // Only attempt seeding when a user is signed in to avoid permission-denied errors
+  if (!currentUserProfile) return;
+
   try {
     const existingSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
     if (!existingSnap.empty) {
       return; // already has content!
     }
 
-    const defaultAuthor = currentUserProfile || {
-      id: 'fg_botanist_system',
-      displayName: 'Aria Verdant',
-      username: 'aria_leaf',
-      photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    };
+    const defaultAuthor = currentUserProfile;
 
     const initialPosts: Array<Omit<PostItem, 'id' | 'likesCount' | 'commentsCount' | 'sharesCount'>> = [
       {
@@ -1327,4 +1431,393 @@ export async function recordStoryView(storyId: string, viewerId: string) {
     // Non-blocking view tracking
   }
 }
+
+// ==================== LOVE & COUPLE CONNECT ====================
+
+/**
+ * Subscribes to the active or pending couple connection for the current user.
+ */
+export function subscribeUserCouple(
+  userId: string,
+  callback: (couple: CoupleItem | null) => void,
+  onError?: (err: Error) => void
+) {
+  const couplesRef = collection(db, 'couples');
+  const q = query(couplesRef, where('participants', 'array-contains', userId));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      if (snapshot.empty) {
+        callback(null);
+        return;
+      }
+
+      const couples = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<CoupleItem, 'id'>),
+      }));
+
+      // Prioritize active connected couple, then pending couple request
+      const active = couples.find((c) => c.status === 'connected');
+      if (active) {
+        callback(active);
+        return;
+      }
+
+      const pending = couples.find((c) => c.status === 'pending');
+      if (pending) {
+        callback(pending);
+        return;
+      }
+
+      callback(null);
+    },
+    (error) => {
+      console.warn('[FG TIME] subscribeUserCouple warning:', error);
+      if (onError) onError(error instanceof Error ? error : new Error(String(error)));
+      else callback(null);
+    }
+  );
+}
+
+/**
+ * Sends a mutual-consent couple invitation to another user.
+ */
+export async function sendCoupleInvitation(
+  fromUser: UserProfile,
+  toUser: UserProfile,
+  anniversaryDate?: string,
+  invitationNote?: string,
+  partnerNickname?: string
+): Promise<string> {
+  const couplesRef = collection(db, 'couples');
+  const newCoupleDoc = doc(couplesRef);
+
+  const coupleData: any = {
+    id: newCoupleDoc.id,
+    user1Id: fromUser.id,
+    user2Id: toUser.id,
+    participants: [fromUser.id, toUser.id],
+    requestedBy: fromUser.id,
+    requestedTo: toUser.id,
+    status: 'pending',
+    partner1Name: fromUser.displayName,
+    partner2Name: toUser.displayName,
+    partner1Username: fromUser.username,
+    partner2Username: toUser.username,
+    partner1Avatar: fromUser.photoURL || '',
+    partner2Avatar: toUser.photoURL || '',
+    partner1Nickname: partnerNickname || fromUser.displayName,
+    partner2Nickname: toUser.displayName,
+    anniversaryDate: anniversaryDate || new Date().toISOString().split('T')[0],
+    invitationNote: invitationNote || `I'd love to share our FG TIME journey together 🌿💖`,
+    loveNotes: [
+      {
+        id: `note-${Date.now()}`,
+        senderId: fromUser.id,
+        senderName: fromUser.displayName,
+        senderPhoto: fromUser.photoURL || '',
+        text: invitationNote || `Connected our botanical hearts on FG TIME! 🌸`,
+        reaction: '💖',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    customMilestones: [
+      {
+        id: `m-1`,
+        title: 'The Day We Sprouted 🌿',
+        date: anniversaryDate || new Date().toISOString().split('T')[0],
+        icon: '🌱',
+        description: 'First day blooming together on FG TIME.',
+        isCustom: false,
+      },
+    ],
+    coupleTheme: 'botanical-rose',
+    isPublicBadge: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(newCoupleDoc, coupleData);
+
+    // Send direct in-app notification to the invited partner
+    const notifRef = collection(db, 'users', toUser.id, 'notifications');
+    await addDoc(notifRef, {
+      userId: toUser.id,
+      senderId: fromUser.id,
+      senderName: fromUser.displayName,
+      senderPhoto: fromUser.photoURL || '',
+      type: 'couple_request',
+      targetId: newCoupleDoc.id,
+      note: invitationNote || '',
+      anniversaryDate: anniversaryDate || '',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return newCoupleDoc.id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'couples');
+    throw error;
+  }
+}
+
+/**
+ * Responds to a pending couple invitation (Accept or Decline).
+ */
+export async function respondToCoupleInvitation(
+  couple: CoupleItem,
+  accept: boolean,
+  currentUser: UserProfile
+): Promise<void> {
+  const coupleRef = doc(db, 'couples', couple.id);
+
+  try {
+    if (accept) {
+      await updateDoc(coupleRef, {
+        status: 'connected',
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Update both user profiles with the verified couple status
+      const isUser1 = currentUser.id === couple.user1Id;
+      const partnerId = isUser1 ? couple.user2Id : couple.user1Id;
+      const partnerName = isUser1 ? couple.partner2Name : couple.partner1Name;
+      const partnerUsername = isUser1 ? couple.partner2Username : couple.partner1Username;
+      const partnerAvatar = isUser1 ? couple.partner2Avatar : couple.partner1Avatar;
+
+      // Update current user's profile
+      await updateDoc(doc(db, 'users', currentUser.id), {
+        coupleId: couple.id,
+        partnerId,
+        partnerDisplayName: partnerName,
+        partnerUsername,
+        partnerAvatar,
+        coupleStatus: 'connected',
+        anniversaryDate: couple.anniversaryDate,
+      }).catch((err) => console.warn('Could not update user couple status:', err));
+
+      // Update partner's profile
+      await updateDoc(doc(db, 'users', partnerId), {
+        coupleId: couple.id,
+        partnerId: currentUser.id,
+        partnerDisplayName: currentUser.displayName,
+        partnerUsername: currentUser.username,
+        partnerAvatar: currentUser.photoURL || '',
+        coupleStatus: 'connected',
+        anniversaryDate: couple.anniversaryDate,
+      }).catch((err) => console.warn('Could not update partner couple status:', err));
+
+      // Notify the requester that proposal was accepted
+      const notifRef = collection(db, 'users', couple.requestedBy, 'notifications');
+      await addDoc(notifRef, {
+        userId: couple.requestedBy,
+        senderId: currentUser.id,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL || '',
+        type: 'couple_accepted',
+        targetId: couple.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    } else {
+      await updateDoc(coupleRef, {
+        status: 'rejected',
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `couples/${couple.id}`);
+    throw error;
+  }
+}
+
+/**
+ * Disconnects / unlinks an active couple space with mutual safety.
+ */
+export async function disconnectCouple(
+  coupleId: string,
+  user1Id: string,
+  user2Id: string
+): Promise<void> {
+  try {
+    await updateDoc(doc(db, 'couples', coupleId), {
+      status: 'disconnected',
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Clear couple attributes from both user profiles
+    await updateDoc(doc(db, 'users', user1Id), {
+      coupleId: null,
+      partnerId: null,
+      partnerDisplayName: null,
+      partnerUsername: null,
+      partnerAvatar: null,
+      coupleStatus: null,
+    }).catch(() => {});
+
+    await updateDoc(doc(db, 'users', user2Id), {
+      coupleId: null,
+      partnerId: null,
+      partnerDisplayName: null,
+      partnerUsername: null,
+      partnerAvatar: null,
+      coupleStatus: null,
+    }).catch(() => {});
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `couples/${coupleId}`);
+    throw error;
+  }
+}
+
+/**
+ * Updates couple metadata (anniversary date, theme, public badge toggle, nicknames).
+ */
+export async function updateCoupleDetails(
+  coupleId: string,
+  updates: Partial<CoupleItem>
+): Promise<void> {
+  try {
+    const coupleRef = doc(db, 'couples', coupleId);
+    await updateDoc(coupleRef, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `couples/${coupleId}`);
+    throw error;
+  }
+}
+
+/**
+ * Appends a daily love note or sweet whisper to the couple board.
+ */
+export async function addDailyLoveNote(
+  coupleId: string,
+  note: LoveNoteItem
+): Promise<void> {
+  try {
+    const coupleRef = doc(db, 'couples', coupleId);
+    await updateDoc(coupleRef, {
+      loveNotes: arrayUnion(note),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `couples/${coupleId}/loveNotes`);
+    throw error;
+  }
+}
+
+/**
+ * Adds a custom relationship milestone.
+ */
+export async function addRelationshipMilestone(
+  coupleId: string,
+  milestone: RelationshipMilestone
+): Promise<void> {
+  try {
+    const coupleRef = doc(db, 'couples', coupleId);
+    await updateDoc(coupleRef, {
+      customMilestones: arrayUnion(milestone),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `couples/${coupleId}/milestones`);
+    throw error;
+  }
+}
+
+// ==================== PRIVATE LOVE MEMORIES ALBUM ====================
+
+/**
+ * Subscribes to the private memories album for a couple.
+ */
+export function subscribeCoupleMemories(
+  coupleId: string,
+  callback: (memories: LoveMemoryItem[]) => void
+) {
+  const memoriesRef = collection(db, 'couples', coupleId, 'memories');
+  const q = query(memoriesRef, orderBy('createdAt', 'desc'), limit(100));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const memories = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<LoveMemoryItem, 'id'>),
+      }));
+      callback(memories);
+    },
+    (error) => {
+      console.warn('[FG TIME] subscribeCoupleMemories warning:', error);
+      callback([]);
+    }
+  );
+}
+
+/**
+ * Adds a private photo memory to the couple's shared scrapbook.
+ */
+export async function addCoupleMemory(
+  coupleId: string,
+  memory: Omit<LoveMemoryItem, 'id' | 'createdAt'>
+): Promise<string> {
+  const memoriesRef = collection(db, 'couples', coupleId, 'memories');
+  const memoryDocRef = doc(memoriesRef);
+
+  const fullMemory: LoveMemoryItem = {
+    ...memory,
+    id: memoryDocRef.id,
+    coupleId,
+    likes: [],
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(memoryDocRef, fullMemory);
+    return memoryDocRef.id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `couples/${coupleId}/memories`);
+    throw error;
+  }
+}
+
+/**
+ * Deletes a memory from the private couple scrapbook.
+ */
+export async function deleteCoupleMemory(
+  coupleId: string,
+  memoryId: string
+): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'couples', coupleId, 'memories', memoryId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `couples/${coupleId}/memories/${memoryId}`);
+    throw error;
+  }
+}
+
+/**
+ * Toggles like / heart reaction on a shared love memory.
+ */
+export async function toggleMemoryLoveReaction(
+  coupleId: string,
+  memoryId: string,
+  userId: string,
+  hasLiked: boolean
+): Promise<void> {
+  try {
+    const memoryRef = doc(db, 'couples', coupleId, 'memories', memoryId);
+    if (hasLiked) {
+      await updateDoc(memoryRef, { likes: arrayRemove(userId) });
+    } else {
+      await updateDoc(memoryRef, { likes: arrayUnion(userId) });
+    }
+  } catch (error) {
+    console.warn('Could not toggle memory reaction:', error);
+  }
+}
+
 

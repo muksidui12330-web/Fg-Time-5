@@ -24,6 +24,7 @@ import { UserProfile, PostItem } from '../types';
 import {
   getUserProfile,
   subscribePosts,
+  subscribeUserPosts,
   subscribeSavedPosts,
   toggleFollowUser,
   checkIsFollowing,
@@ -37,6 +38,7 @@ interface ProfileViewProps {
   onOpenReportPost: (postId: string) => void;
   onRequireAuth?: () => void;
   onOpenSettings?: () => void;
+  onOpenCoupleSpace?: () => void;
 }
 
 const LEAF_BADGES = [
@@ -53,6 +55,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenReportPost,
   onRequireAuth,
   onOpenSettings,
+  onOpenCoupleSpace,
 }) => {
   const { currentUser, userProfile: myProfile, updateCurrentProfile, signInWithGoogle } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -93,12 +96,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   }, [effectiveUserId, isMe, myProfile, currentUser]);
 
-  // Subscribe to user posts
+  // Subscribe to user's personal posts
   useEffect(() => {
     if (!effectiveUserId) return;
-    const unsub = subscribePosts((posts) => {
-      const mine = posts.filter((p) => p.authorId === effectiveUserId);
-      setUserPosts(mine);
+    const unsub = subscribeUserPosts(effectiveUserId, (posts) => {
+      setUserPosts(posts);
     });
     return () => unsub();
   }, [effectiveUserId]);
@@ -293,6 +295,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-[10px] text-[#00C853] font-semibold animate-pulse">Copied!</span>
             )}
           </div>
+
+          {/* Couple Badge if Connected */}
+          {profile.partnerUsername && (profile.isCouplePublic ?? true) && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => onOpenCoupleSpace && onOpenCoupleSpace()}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-purple-500/15 border border-pink-400/30 text-xs font-bold text-pink-600 dark:text-pink-300 hover:scale-105 transition-all shadow-sm cursor-pointer"
+                title="View Couple Space"
+              >
+                <Heart className="w-3.5 h-3.5 fill-pink-500 text-pink-500 animate-pulse" />
+                <span>Connected with @{profile.partnerUsername}</span>
+                {profile.anniversaryDate && (
+                  <span className="text-[10px] text-purple-500 dark:text-purple-300 font-semibold">
+                    • Since {profile.anniversaryDate} 💕
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Quick link to Couple Connect if viewing own profile and not yet connected */}
+          {isMe && !profile.partnerUsername && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => onOpenCoupleSpace && onOpenCoupleSpace()}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-[#00C853]/10 hover:bg-pink-500/20 border border-pink-300/40 text-xs font-bold text-pink-600 dark:text-pink-300 transition-all cursor-pointer"
+              >
+                <Heart className="w-3.5 h-3.5 fill-pink-500 text-pink-500" />
+                <span>Couple Connect: Link hearts with your partner 💖</span>
+              </button>
+            </div>
+          )}
 
           {/* Bio */}
           {profile.bio && (

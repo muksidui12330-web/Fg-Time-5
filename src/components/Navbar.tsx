@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, MessageCircle, LogIn, Plus, Sparkles, Settings, Music } from 'lucide-react';
+import { Bell, MessageCircle, LogIn, Plus, Sparkles, Settings, Music, Heart } from 'lucide-react';
 import { GreenLeafLogo } from './GreenLeafLogo';
 import { useAuth } from '../context/AuthContext';
 import { NavTab } from './Sidebar';
@@ -78,6 +78,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           title="FG TIME Music Studio"
         >
           <Music className="w-5 h-5 text-[#00C853]" />
+        </button>
+
+        <button
+          onClick={() => onTabChange('couple')}
+          className="p-2 rounded-full text-pink-500 hover:bg-pink-500/10 transition-colors cursor-pointer"
+          title="FG TIME Love & Couple Sanctuary"
+        >
+          <Heart className="w-5 h-5 text-pink-500 fill-pink-500/20 hover:fill-pink-500 transition-colors" />
         </button>
 
         {onOpenSettings && (

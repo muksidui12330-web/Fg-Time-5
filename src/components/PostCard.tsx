@@ -340,6 +340,14 @@ export const PostCard: React.FC<PostCardProps> = ({
               <span className="text-xs text-stone-400">
                 @{post.authorUsername}
               </span>
+              {post.authorId === userProfile?.id && userProfile?.partnerUsername && (
+                <span
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-300 text-[10px] font-semibold"
+                  title={`Linked with @${userProfile.partnerUsername} 💖`}
+                >
+                  <Heart className="w-2.5 h-2.5 fill-pink-500 text-pink-500" />
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 text-[11px] text-stone-400 flex-wrap">
               <span>{timeAgo(post.createdAt)}</span>

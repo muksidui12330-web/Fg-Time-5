@@ -26,7 +26,9 @@ import {
   Sparkles,
   Camera,
   RefreshCw,
+  Heart,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { ConversationItem, MessageItem, UserProfile } from '../types';
 import {
@@ -57,6 +59,7 @@ import { getUserPresenceStatus } from '../services/settingsService';
 interface MessagesViewProps {
   initialTargetUserId?: string | null;
   onOpenUserProfile?: (userId: string) => void;
+  onOpenCoupleSpace?: () => void;
 }
 
 const BOTANICAL_ICONS = [
@@ -69,9 +72,28 @@ const BOTANICAL_ICONS = [
 
 const QUICK_EMOJIS = ['🌿', '🍃', '🌱', '🪴', '❤️', '👍', '🔥', '🌸'];
 
+const ROMANTIC_STICKERS = [
+  { label: 'Sweet Love', emoji: '💖', text: 'Sending you so much sweet love 💖' },
+  { label: 'Rose Petals', emoji: '🌹', text: 'A shower of fresh rose petals for you 🌹✨' },
+  { label: 'Soulmate Hug', emoji: '🌸', text: 'Sending you a warm soulmate hug 🌸🤗' },
+  { label: 'Thinking of You', emoji: '💌', text: 'Just wanted to say I am thinking of you 💌' },
+  { label: 'Botanical Heart', emoji: '🌿', text: 'You make my heart bloom every day 🌿💚' },
+  { label: 'Forever & Always', emoji: '💍', text: 'Forever & always by your side 💍' },
+  { label: 'Sweet Cuddles', emoji: '☕', text: 'Warm coffee and sweet cuddles ☕💕' },
+  { label: 'Pure Magic', emoji: '✨', text: 'You bring pure magic to my life ✨' },
+];
+
+const ROMANTIC_NUDGES = [
+  'Thinking of you 🌸',
+  'Good morning my love ☀️💖',
+  'You make my heart bloom 🌿✨',
+  'Can’t wait to see you 💕',
+];
+
 export const MessagesView: React.FC<MessagesViewProps> = ({
   initialTargetUserId,
   onOpenUserProfile,
+  onOpenCoupleSpace,
 }) => {
   const { currentUser, userProfile, signInWithGoogle } = useAuth();
 
@@ -84,6 +106,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [otherUserMap, setOtherUserMap] = useState<Record<string, UserProfile>>({});
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'direct' | 'groups'>('all');
   const [inboxSearch, setInboxSearch] = useState('');
+  const [showRomanticStickers, setShowRomanticStickers] = useState(false);
 
   // Modals state
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
@@ -338,6 +361,29 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   // Quick emoji insertion
   const handleAddEmoji = (emoji: string) => {
     setMessageText((prev) => prev + emoji);
+  };
+
+  // Romantic sticker & whisper sender
+  const handleSendRomanticSticker = async (stickerText: string) => {
+    if (!selectedConversationId || !currentUser || !userProfile) return;
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 75,
+        origin: { y: 0.7 },
+        colors: ['#00C853', '#FF6584', '#8B5CF6', '#FDA4AF'],
+      });
+    } catch {}
+
+    try {
+      await sendMessage(
+        selectedConversationId,
+        userProfile,
+        stickerText
+      );
+    } catch (err) {
+      console.warn('Could not send sticker:', err);
+    }
   };
 
   // Delete message (sender or group admin)
@@ -736,6 +782,20 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                             </>
                           );
                         })()}
+                        {activeOtherProfile && activeOtherUserId && (userProfile?.partnerId === activeOtherUserId || (userProfile?.coupleId && activeOtherProfile.coupleId === userProfile.coupleId)) && (
+                          <>
+                            <span className="text-stone-300 dark:text-stone-600">•</span>
+                            <button
+                              type="button"
+                              onClick={() => onOpenCoupleSpace && onOpenCoupleSpace()}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500/15 via-purple-500/15 to-emerald-500/15 border border-pink-400/40 text-[9px] font-bold text-pink-600 dark:text-pink-300 hover:scale-105 transition-all shadow-sm cursor-pointer"
+                              title="Open Private Couple Space"
+                            >
+                              <Heart className="w-2.5 h-2.5 fill-pink-500 text-pink-500 animate-pulse" />
+                              <span>Couple Partner 💕</span>
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </p>
@@ -979,20 +1039,77 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               </div>
             )}
 
-            {/* Quick Emoji Bar */}
-            <div className="px-3 py-1 bg-stone-50 dark:bg-[#101512] border-t border-stone-200 dark:border-emerald-900/40 flex items-center gap-1 overflow-x-auto scrollbar-none">
-              <span className="text-[10px] text-stone-400 mr-1 font-semibold">React:</span>
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleAddEmoji(emoji)}
-                  className="p-1 hover:bg-stone-200 dark:hover:bg-emerald-900 rounded text-sm transition-transform active:scale-125"
-                >
-                  {emoji}
-                </button>
-              ))}
+            {/* Quick Emoji Bar & Romantic Stickers Toggle */}
+            <div className="px-3 py-1 bg-stone-50 dark:bg-[#101512] border-t border-stone-200 dark:border-emerald-900/40 flex items-center justify-between gap-1 overflow-x-auto scrollbar-none">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-stone-400 mr-1 font-semibold">React:</span>
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleAddEmoji(emoji)}
+                    className="p-1 hover:bg-stone-200 dark:hover:bg-emerald-900 rounded text-sm transition-transform active:scale-125 cursor-pointer"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              {/* Romantic Stickers & Reactions Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowRomanticStickers(!showRomanticStickers)}
+                className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                  showRomanticStickers
+                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm shadow-pink-500/30'
+                    : 'bg-pink-500/10 text-pink-600 dark:text-pink-300 hover:bg-pink-500/20'
+                }`}
+                title="Romantic Stickers & Reactions"
+              >
+                <Heart className={`w-3 h-3 ${showRomanticStickers ? 'fill-white' : 'fill-pink-500 text-pink-500'}`} />
+                <span>Love Stickers 💕</span>
+              </button>
             </div>
+
+            {/* Romantic Stickers Drawer */}
+            {showRomanticStickers && (
+              <div className="px-3 py-2 bg-gradient-to-r from-pink-50/90 via-purple-50/70 to-emerald-50/90 dark:from-pink-950/40 dark:via-purple-950/40 dark:to-emerald-950/40 border-t border-pink-200 dark:border-pink-900/50">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Tap to send love whisper:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {ROMANTIC_NUDGES.slice(0, 2).map((nudge) => (
+                      <button
+                        key={nudge}
+                        type="button"
+                        onClick={() => handleSendRomanticSticker(nudge)}
+                        className="px-2 py-0.5 rounded-full bg-white dark:bg-black/40 border border-pink-200 dark:border-pink-800 text-[9px] font-semibold text-stone-700 dark:text-stone-200 hover:bg-pink-100 transition-colors cursor-pointer truncate max-w-[120px]"
+                      >
+                        {nudge}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                  {ROMANTIC_STICKERS.map((st) => (
+                    <button
+                      key={st.label}
+                      type="button"
+                      onClick={() => handleSendRomanticSticker(st.text)}
+                      className="p-1.5 rounded-xl bg-white dark:bg-[#12281E] border border-pink-100 dark:border-pink-900/50 hover:border-pink-400 dark:hover:border-pink-600 hover:scale-105 active:scale-95 transition-all text-center group cursor-pointer shadow-sm"
+                      title={st.label}
+                    >
+                      <span className="text-xl block group-hover:scale-110 transition-transform">{st.emoji}</span>
+                      <span className="text-[8px] font-bold text-stone-600 dark:text-stone-300 block truncate mt-0.5">
+                        {st.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Input Bar */}
             <form

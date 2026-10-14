@@ -86,6 +86,15 @@ export interface UserProfile {
   postsCount: number;
   createdAt: string;
   blockedUsers?: string[];
+  coupleId?: string | null;
+  partnerId?: string | null;
+  partnerUsername?: string | null;
+  partnerDisplayName?: string | null;
+  partnerAvatar?: string | null;
+  partnerNickname?: string | null;
+  coupleStatus?: 'connected' | 'pending';
+  anniversaryDate?: string | null;
+  isCouplePublic?: boolean;
 }
 
 export interface PostMusic {
@@ -236,9 +245,70 @@ export interface NotificationItem {
   senderId: string;
   senderName: string;
   senderPhoto: string;
-  type: 'like' | 'comment' | 'follow' | 'mention' | 'follow_request';
+  type: 'like' | 'comment' | 'follow' | 'mention' | 'follow_request' | 'couple_request' | 'couple_accepted';
   targetId: string;
   read: boolean;
+  createdAt: string;
+  note?: string;
+  anniversaryDate?: string;
+}
+
+export interface LoveNoteItem {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderPhoto?: string;
+  text: string;
+  reaction?: string;
+  createdAt: string;
+}
+
+export interface RelationshipMilestone {
+  id: string;
+  title: string;
+  date: string;
+  icon?: string;
+  description?: string;
+  isCustom?: boolean;
+}
+
+export interface CoupleItem {
+  id: string;
+  user1Id: string;
+  user2Id: string;
+  requestedBy: string;
+  requestedTo: string;
+  status: 'pending' | 'connected' | 'rejected' | 'disconnected';
+  partner1Name: string;
+  partner2Name: string;
+  partner1Username: string;
+  partner2Username: string;
+  partner1Avatar?: string;
+  partner2Avatar?: string;
+  partner1Nickname?: string;
+  partner2Nickname?: string;
+  anniversaryDate?: string; // YYYY-MM-DD
+  invitationNote?: string;
+  loveNotes?: LoveNoteItem[];
+  customMilestones?: RelationshipMilestone[];
+  coupleTheme?: 'botanical-rose' | 'amethyst-glow' | 'emerald-passion';
+  isPublicBadge?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoveMemoryItem {
+  id: string;
+  coupleId: string;
+  authorId: string;
+  authorName: string;
+  authorPhoto?: string;
+  imageUrl: string;
+  title: string;
+  caption?: string;
+  memoryDate: string; // YYYY-MM-DD
+  mood?: 'romantic' | 'adventure' | 'peaceful' | 'celebration' | 'milestone';
+  likes?: string[];
   createdAt: string;
 }
 
@@ -258,3 +328,4 @@ export interface SavedPostRecord {
   savedAt: string;
   post?: PostItem;
 }
+

@@ -12,11 +12,12 @@ import {
   LogIn,
   Sparkles,
   Music,
+  Heart,
 } from 'lucide-react';
 import { GreenLeafLogo } from './GreenLeafLogo';
 import { useAuth } from '../context/AuthContext';
 
-export type NavTab = 'feed' | 'explore' | 'reels' | 'music' | 'messages' | 'notifications' | 'profile';
+export type NavTab = 'feed' | 'explore' | 'reels' | 'music' | 'couple' | 'messages' | 'notifications' | 'profile';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'explore' as NavTab, label: 'Explore & Search', icon: Compass },
     { id: 'reels' as NavTab, label: 'Leaf Clips', icon: Film },
     { id: 'music' as NavTab, label: 'Music Studio', icon: Music },
+    { id: 'couple' as NavTab, label: 'Love & Couple', icon: Heart },
     {
       id: 'messages' as NavTab,
       label: 'Direct Whispers',

@@ -226,6 +226,48 @@ service cloud.firestore {
       }
     }
 
+    // Couple Connect & Private Love Space
+    match /couples/{coupleId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.user1Id ||
+        request.auth.uid == resource.data.user2Id ||
+        request.auth.uid == resource.data.requestedBy ||
+        request.auth.uid == resource.data.requestedTo
+      );
+      allow create: if isSignedIn() && (
+        request.auth.uid == request.resource.data.user1Id ||
+        request.auth.uid == request.resource.data.requestedBy
+      );
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.user1Id ||
+        request.auth.uid == resource.data.user2Id ||
+        request.auth.uid == resource.data.requestedTo ||
+        request.auth.uid == resource.data.requestedBy
+      );
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.user1Id ||
+        request.auth.uid == resource.data.user2Id ||
+        request.auth.uid == resource.data.requestedBy
+      );
+
+      // Private Love Memories Album Subcollection
+      match /memories/{memoryId} {
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user1Id ||
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user2Id
+        );
+        allow create, update: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user1Id ||
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user2Id
+        );
+        allow delete: if isSignedIn() && (
+          request.auth.uid == resource.data.authorId ||
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user1Id ||
+          request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.user2Id
+        );
+      }
+    }
+
     // Abuse Reports
     match /reports/{reportId} {
       allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
@@ -233,3 +275,4 @@ service cloud.firestore {
     }
   }
 }
+
