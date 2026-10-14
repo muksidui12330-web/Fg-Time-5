@@ -3,6 +3,7 @@ import { Bell, MessageCircle, LogIn, Plus, Sparkles, Settings, Music, Heart, Sma
 import { GreenLeafLogo } from './GreenLeafLogo';
 import { useAuth } from '../context/AuthContext';
 import { NavTab } from './Sidebar';
+import { isApkDownloadAvailable } from '../config/apkConfig';
 
 interface NavbarProps {
   onTabChange: (tab: NavTab) => void;
@@ -37,11 +38,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenDownloadApk && (
           <button
             onClick={onOpenDownloadApk}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#00C853] hover:bg-[#00A344] text-white text-[11px] font-extrabold shadow-sm shadow-[#00C853]/30 active:scale-95 transition-all cursor-pointer shrink-0"
-            title="Download FG TIME Android APK"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#00C853] hover:bg-[#00A344] text-white text-[11px] font-extrabold shadow-sm shadow-[#00C853]/30 active:scale-95 transition-all cursor-pointer shrink-0"
+            title="FG TIME Android App APK"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>APK</span>
+            <span>{isApkDownloadAvailable() ? 'Download APK' : 'APK Coming Soon'}</span>
           </button>
         )}
 

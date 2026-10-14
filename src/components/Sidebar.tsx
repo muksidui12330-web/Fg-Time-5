@@ -128,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-bold">Download Android APK</span>
               </div>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#00C853] text-white shadow-xs">
-                {isApkDownloadAvailable() ? 'v1.2.0' : 'Coming Soon'}
+                {isApkDownloadAvailable() ? 'Download APK' : 'APK Coming Soon'}
               </span>
             </button>
           )}

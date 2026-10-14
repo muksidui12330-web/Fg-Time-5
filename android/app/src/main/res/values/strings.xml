@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FG TIME</string>
+    <string name="package_name">com.fgtime.app</string>
+    <string name="loading_fg_time">Connecting to FG TIME…</string>
+    <string name="error_offline">FG TIME is offline. Please check your internet connection.</string>
+    <string name="action_retry">Retry</string>
+</resources>
