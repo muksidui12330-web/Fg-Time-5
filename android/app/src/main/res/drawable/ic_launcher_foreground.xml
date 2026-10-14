@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="10.8"
+        android:translateY="10.8">
+        <!-- Main Foreground Leaf -->
+        <path
+            android:fillColor="#00C853"
+            android:pathData="M24,78 C30,76 38,70 48,58 C60,44 76,28 86,22 C84,32 76,46 64,58 C52,70 38,78 24,78 Z" />
+        <!-- Second Inner Leaf -->
+        <path
+            android:fillColor="#69F0AE"
+            android:pathData="M34,68 C40,56 50,44 64,36 C74,30 82,24 86,22 C78,34 70,48 56,60 C46,68 38,72 34,68 Z" />
+        <!-- Central Sprout Stem -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:pathData="M24,80 C36,74 52,60 72,36" />
+    </group>
+</vector>
