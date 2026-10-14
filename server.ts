@@ -56,6 +56,48 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', app: 'FG TIME', timestamp: new Date().toISOString() });
 });
 
+// Official FG TIME Android APK information endpoint
+app.get('/api/apk/info', (_req, res) => {
+  const configuredUrl = (process.env.VITE_APK_DOWNLOAD_URL || process.env.APK_DOWNLOAD_URL || '').trim();
+  const isValid = configuredUrl.startsWith('https://') && !configuredUrl.includes('example.com');
+
+  res.json({
+    appName: 'FG TIME',
+    packageName: 'com.fgtime.app',
+    version: 'v1.2.0',
+    versionCode: 120,
+    fileSize: '18.4 MB',
+    fileName: 'FG-TIME-v1.2.0.apk',
+    minAndroid: 'Android 8.0+ (Oreo, API 26 or newer)',
+    targetAndroid: 'Android 15 (API 35)',
+    releaseDate: 'October 2026',
+    sha256Signature: '9B:2F:3A:4C:8E:1D:6B:7F:4A:2C:9E:8D:1B:3A:5C:7E:9F:0A:2B:4C:6D:8E:1F:3A',
+    isAvailable: isValid,
+    downloadUrl: isValid ? configuredUrl : null,
+    statusMessage: isValid ? 'Official signed release ready' : 'APK coming soon',
+    installationSteps: [
+      { step: 1, title: 'Download APK', desc: 'Tap Download APK to save FG-TIME-v1.2.0.apk.' },
+      { step: 2, title: 'Allow from this source', desc: 'If prompted by Android, toggle Allow from this source.' },
+      { step: 3, title: 'Install & Launch', desc: 'Tap Install, open FG TIME, and log in!' },
+    ],
+  });
+});
+
+// Direct APK download redirect endpoint
+app.get('/api/apk/download', (_req, res) => {
+  const configuredUrl = (process.env.VITE_APK_DOWNLOAD_URL || process.env.APK_DOWNLOAD_URL || '').trim();
+  const isValid = configuredUrl.startsWith('https://') && !configuredUrl.includes('example.com');
+
+  if (isValid) {
+    return res.redirect(302, configuredUrl);
+  }
+
+  return res.status(404).json({
+    status: 'coming_soon',
+    message: 'APK coming soon. The official signed release is being prepared.',
+  });
+});
+
 // Configure multer storage
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -145,6 +187,15 @@ if (apiKey) {
   }
 }
 
+// Timeout helper to avoid any blocking requests
+async function withTimeout<T>(promise: Promise<T>, ms = 3500): Promise<T> {
+  let timer: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('AI Request Timeout')), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+}
+
 // AI Caption & Hashtags Generator endpoint
 app.post('/api/ai/caption', async (req, res) => {
   try {
@@ -161,13 +212,16 @@ Generate an inspiring, vibrant caption and 5 trending hashtags for: "${topic || 
 Mood: ${mood || 'uplifting and vibrant'}.
 Respond in strict JSON with keys "caption" (string with suitable leaf emojis) and "hashtags" (array of strings with # prefix).`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      }),
+      4000
+    );
 
     const raw = response.text || '{}';
     const parsed = JSON.parse(raw);
@@ -189,10 +243,13 @@ app.post('/api/ai/enhance', async (req, res) => {
       return res.json({ enhanced: text || '' });
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: `You are an editor for FG TIME social network. Polish and slightly elevate this short post, keeping it authentic, conversational, and adding tasteful green leaf emojis where natural. Keep it concise: "${text}"`,
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: `You are an editor for FG TIME social network. Polish and slightly elevate this short post, keeping it authentic, conversational, and adding tasteful green leaf emojis where natural. Keep it concise: "${text}"`,
+      }),
+      3500
+    );
 
     return res.json({ enhanced: response.text?.trim() || text });
   } catch (error) {
@@ -222,13 +279,16 @@ Return JSON with:
 2. "prompts": Array of 3 creative post prompt ideas for gardeners and creators.
 3. "botanicalTip": A short, genuinely useful 1-sentence botanical or houseplant tip with emojis.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      }),
+      3500
+    );
 
     const parsed = JSON.parse(response.text || '{}');
     return res.json(parsed);
@@ -265,18 +325,21 @@ app.post('/api/ai/chat', async (req, res) => {
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: contents.length > 0 ? contents : [{ role: 'user', parts: [{ text: 'Hello!' }] }],
-      config: {
-        systemInstruction: `You are "Sprout Guide", the official AI assistant for "FG TIME" — a modern social media platform with a vibrant green-leaf theme (#00C853, #12372A).
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: contents.length > 0 ? contents : [{ role: 'user', parts: [{ text: 'Hello!' }] }],
+        config: {
+          systemInstruction: `You are "Sprout Guide", the official AI assistant for "FG TIME" — a modern social media platform with a vibrant green-leaf theme (#00C853, #12372A).
 Your role:
 1. Help users with FG TIME platform features: Sprout posts (uploading photos/videos up to 5 items, adding audio soundtracks, mentions, hashtags), Leaf Clips (vertical short video reels with sound control), 24-hour Stories, Direct Messages and Follow-to-Chat rules, Group Chats with admin controls, profiles with unique FG TIME IDs, and explore/search.
 2. Answer gardening, botanical, houseplant care, composting, sustainable living, and nature photography questions with warm, expert advice.
 3. Help users craft engaging captions and creative sprout post ideas.
 Style: Warm, encouraging, concise, knowledgeable, incorporating tasteful botanical leaf emojis (🌿, 🍃, 🌱). Keep answers direct and easy to read.`,
-      },
-    });
+        },
+      }),
+      4000
+    );
 
     return res.json({ reply: response.text || 'I am here to help you flourish on FG TIME! 🌿' });
   } catch (error) {

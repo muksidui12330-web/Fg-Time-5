@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, MessageCircle, LogIn, Plus, Sparkles, Settings, Music, Heart } from 'lucide-react';
+import { Bell, MessageCircle, LogIn, Plus, Sparkles, Settings, Music, Heart, Smartphone, Download } from 'lucide-react';
 import { GreenLeafLogo } from './GreenLeafLogo';
 import { useAuth } from '../context/AuthContext';
 import { NavTab } from './Sidebar';
@@ -10,6 +10,7 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onOpenAiAssistant?: () => void;
   onOpenSettings?: () => void;
+  onOpenDownloadApk?: () => void;
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
 }
@@ -20,18 +21,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onOpenAiAssistant,
   onOpenSettings,
+  onOpenDownloadApk,
   unreadNotificationsCount = 0,
   unreadMessagesCount = 0,
 }) => {
   const { currentUser, userProfile } = useAuth();
 
   return (
-    <header className="md:hidden sticky top-0 z-30 w-full bg-white/95 dark:bg-[#12372A]/90 backdrop-blur-md border-b border-[#00C853]/20 dark:border-emerald-800/40 px-4 py-3 flex items-center justify-between">
-      <div className="cursor-pointer" onClick={() => onTabChange('feed')}>
+    <header className="md:hidden sticky top-0 z-30 w-full bg-white/95 dark:bg-[#12372A]/90 backdrop-blur-md border-b border-[#00C853]/20 dark:border-emerald-800/40 px-3 py-2.5 flex items-center justify-between">
+      <div className="cursor-pointer shrink-0" onClick={() => onTabChange('feed')}>
         <GreenLeafLogo size="sm" />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {onOpenDownloadApk && (
+          <button
+            onClick={onOpenDownloadApk}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#00C853] hover:bg-[#00A344] text-white text-[11px] font-extrabold shadow-sm shadow-[#00C853]/30 active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Download FG TIME Android APK"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>APK</span>
+          </button>
+        )}
+
         {onOpenAiAssistant && (
           <button
             onClick={onOpenAiAssistant}

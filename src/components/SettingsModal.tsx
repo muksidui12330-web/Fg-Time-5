@@ -61,6 +61,13 @@ import {
   SETTINGS_TRANSLATIONS,
 } from '../services/settingsService';
 import { UserSettings, DEFAULT_USER_SETTINGS, ReportItem, PostItem } from '../types';
+import {
+  FG_TIME_APK_METADATA,
+  getApkDownloadUrl,
+  isValidHttpsApkUrl,
+  saveApkDownloadUrl,
+  isApkDownloadAvailable,
+} from '../config/apkConfig';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -78,6 +85,7 @@ type SettingsSectionId =
   | 'media'
   | 'appearance'
   | 'storage'
+  | 'apk'
   | 'help'
   | 'admin';
 
@@ -335,6 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'media' as const, label: t.secMedia, icon: Video, keywords: 'autoplay sound muted data saver upload quality reduce motion feed' },
     { id: 'appearance' as const, label: t.secAppearance, icon: Palette, keywords: 'theme dark daylight font size language english hindi spanish' },
     { id: 'storage' as const, label: t.secStorage, icon: HardDrive, keywords: 'cache data storage export json usage clean' },
+    { id: 'apk' as const, label: 'Download APK', icon: Smartphone, keywords: 'android apk download mobile phone install version file size release package signed' },
     { id: 'help' as const, label: t.secHelp, icon: HelpCircle, keywords: 'help faq report bug abuse guidelines terms privacy support version' },
     ...(isAdmin
       ? [{ id: 'admin' as const, label: t.secAdmin, icon: Shield, keywords: 'admin moderation reports health overview stats' }]
@@ -1405,6 +1414,174 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-[10px] font-bold bg-[#00C853]/20 text-[#00C853] px-2.5 py-1 rounded-full">
                     Production
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* ================= SECTION 9B: ANDROID APK INSTALLER ================= */}
+            {activeSection === 'apk' && (
+              <div className="space-y-5 text-sm animate-in fade-in">
+                {/* Header Card */}
+                <div className="p-5 rounded-3xl bg-gradient-to-br from-[#12372A] via-[#1B5E20] to-[#12372A] text-white border border-[#00C853]/40 shadow-lg flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#00C853]/20 flex items-center justify-center ring-2 ring-[#00C853]/50 shrink-0">
+                      <Smartphone className="w-6 h-6 text-[#00C853]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-base sm:text-lg">FG TIME for Android</h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00C853] text-[#12372A]">
+                          {FG_TIME_APK_METADATA.version}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-300">
+                        Official Signed Release • {FG_TIME_APK_METADATA.fileSize}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isApkDownloadAvailable() ? (
+                    <button
+                      onClick={() => {
+                        const url = getApkDownloadUrl();
+                        if (url) {
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = FG_TIME_APK_METADATA.fileName;
+                          a.target = '_blank';
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-2xl bg-[#00C853] hover:bg-[#00E676] text-[#12372A] font-black text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download APK</span>
+                    </button>
+                  ) : (
+                    <div className="px-3.5 py-1.5 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>APK Coming Soon</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Specs Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                  <div className="p-3 rounded-2xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60">
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold tracking-wider">
+                      APK Size
+                    </span>
+                    <span className="font-extrabold text-sm text-[#00C853]">
+                      {FG_TIME_APK_METADATA.fileSize}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60">
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold tracking-wider">
+                      Build
+                    </span>
+                    <span className="font-extrabold text-sm text-[#12372A] dark:text-white">
+                      Build {FG_TIME_APK_METADATA.versionCode}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60">
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold tracking-wider">
+                      Compatibility
+                    </span>
+                    <span className="font-extrabold text-xs text-[#12372A] dark:text-white">
+                      Android 8.0 to 15
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60">
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold tracking-wider">
+                      Package
+                    </span>
+                    <span className="font-mono text-[10px] font-bold text-stone-600 dark:text-stone-300 truncate block">
+                      {FG_TIME_APK_METADATA.packageName}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Notice if not configured */}
+                {!isApkDownloadAvailable() && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                    <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Signed APK Release In Progress</p>
+                      <p className="text-[11px] mt-0.5 text-stone-600 dark:text-stone-300">
+                        No external HTTPS download URL is configured yet. Set a verified URL below or wait for the automatic deployment pipeline.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3 Step Installation Instructions */}
+                <div className="space-y-3">
+                  <h4 className="font-bold text-xs text-[#12372A] dark:text-white uppercase tracking-wider">
+                    How to Install FG TIME APK on Android
+                  </h4>
+                  <div className="space-y-2">
+                    {FG_TIME_APK_METADATA.installationSteps.map((step) => (
+                      <div
+                        key={step.step}
+                        className="p-3 rounded-2xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60 flex gap-3"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-[#00C853] text-white font-black text-xs flex items-center justify-center shrink-0">
+                          {step.step}
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="font-bold text-xs text-[#12372A] dark:text-white">
+                            {step.title}
+                          </p>
+                          <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Configurable HTTPS URL Manager */}
+                <div className="p-4 rounded-3xl bg-stone-50 dark:bg-[#101512] border border-stone-200 dark:border-emerald-900/60 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-[#00C853]" />
+                    <h5 className="font-bold text-xs text-[#12372A] dark:text-white">
+                      Configurable HTTPS APK Download URL
+                    </h5>
+                  </div>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                    Set or test an official HTTPS download URL (e.g. stored on Firebase Storage, GitHub Releases, or a CDN).
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      defaultValue={getApkDownloadUrl() || ''}
+                      id="fgtime-settings-apk-input"
+                      placeholder="https://your-domain.com/FG-TIME-v1.2.0.apk"
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-emerald-900 bg-white dark:bg-[#12372A] text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00C853]"
+                    />
+                    <button
+                      onClick={() => {
+                        const input = document.getElementById('fgtime-settings-apk-input') as HTMLInputElement;
+                        const val = input?.value?.trim() || '';
+                        if (!val) {
+                          saveApkDownloadUrl(null);
+                          alert('APK download URL cleared. UI will show "APK coming soon".');
+                        } else if (isValidHttpsApkUrl(val)) {
+                          saveApkDownloadUrl(val);
+                          alert('Valid HTTPS APK URL successfully saved!');
+                        } else {
+                          alert('Invalid URL. Must be a valid HTTPS address (https://...).');
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#00C853] text-white text-xs font-bold hover:bg-[#00A344] transition-colors cursor-pointer shrink-0"
+                    >
+                      Save & Test
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

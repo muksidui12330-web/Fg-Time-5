@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, UserPlus, ShieldCheck, Sparkles, Sprout } from 'lucide-react';
+import { TrendingUp, UserPlus, ShieldCheck, Sparkles, Sprout, Smartphone, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile } from '../types';
 import { searchUsers, toggleFollowUser, checkIsFollowing } from '../services/firestoreService';
+import { isApkDownloadAvailable } from '../config/apkConfig';
 
 interface RightSidebarProps {
   onSelectTag: (tag: string) => void;
   onOpenUserProfile?: (userId: string) => void;
+  onOpenDownloadApk?: () => void;
 }
 
 export const RightSidebar: React.FC<RightSidebarProps> = ({
   onSelectTag,
   onOpenUserProfile,
+  onOpenDownloadApk,
 }) => {
   const { currentUser, userProfile } = useAuth();
   const [suggestedUsers, setSuggestedUsers] = useState<UserProfile[]>([]);
@@ -158,6 +161,34 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* FG TIME Android APK Card */}
+      <div className="p-4 rounded-3xl bg-gradient-to-br from-[#12372A] to-[#1B5E20] text-white border border-[#00C853]/40 shadow-md relative overflow-hidden">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-[#00C853]/25 flex items-center justify-center ring-1 ring-[#00C853]">
+              <Smartphone className="w-4 h-4 text-[#00C853]" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-xs tracking-tight">FG TIME for Android</h4>
+              <p className="text-[10px] text-stone-300">v1.2.0 • 18.4 MB</p>
+            </div>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#00C853] text-[#12372A]">
+            Signed
+          </span>
+        </div>
+        <p className="text-[11px] text-stone-200 leading-relaxed mb-3">
+          Experience ultra-smooth Leaf Clips, instant push whispers, and offline garden reading.
+        </p>
+        <button
+          onClick={onOpenDownloadApk}
+          className="w-full py-2 px-3 rounded-xl bg-[#00C853] hover:bg-[#00E676] text-[#12372A] font-extrabold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>{isApkDownloadAvailable() ? 'Download APK' : 'APK Coming Soon'}</span>
+        </button>
       </div>
 
       {/* Infrastructure & Security Badge */}

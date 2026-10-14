@@ -13,9 +13,12 @@ import {
   Sparkles,
   Music,
   Heart,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 import { GreenLeafLogo } from './GreenLeafLogo';
 import { useAuth } from '../context/AuthContext';
+import { isApkDownloadAvailable } from '../config/apkConfig';
 
 export type NavTab = 'feed' | 'explore' | 'reels' | 'music' | 'couple' | 'messages' | 'notifications' | 'profile';
 
@@ -26,6 +29,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenAuth: () => void;
   onOpenAiAssistant?: () => void;
+  onOpenDownloadApk?: () => void;
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
 }
@@ -37,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onOpenAuth,
   onOpenAiAssistant,
+  onOpenDownloadApk,
   unreadNotificationsCount = 0,
   unreadMessagesCount = 0,
 }) => {
@@ -112,6 +117,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+
+          {onOpenDownloadApk && (
+            <button
+              onClick={onOpenDownloadApk}
+              className="flex items-center justify-between px-3.5 py-3 rounded-2xl font-semibold text-sm text-[#00C853] bg-[#00C853]/10 hover:bg-[#00C853]/20 border border-[#00C853]/30 transition-all duration-200 group text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Smartphone className="w-5 h-5 text-[#00C853] transition-transform group-hover:scale-110" />
+                <span className="font-bold">Download Android APK</span>
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#00C853] text-white shadow-xs">
+                {isApkDownloadAvailable() ? 'v1.2.0' : 'Coming Soon'}
+              </span>
+            </button>
+          )}
 
           <button
             onClick={onOpenSettings}

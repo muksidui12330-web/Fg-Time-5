@@ -20,6 +20,8 @@ import { ReportModal } from './components/ReportModal';
 import { AuthModal } from './components/AuthModal';
 import { SplashScreen } from './components/SplashScreen';
 import { SproutAiAssistantModal } from './components/SproutAiAssistantModal';
+import { DownloadApkModal } from './components/DownloadApkModal';
+import { isApkDownloadAvailable } from './config/apkConfig';
 import { PostItem, UserProfile, PostMusic } from './types';
 import {
   subscribePosts,
@@ -31,7 +33,7 @@ import {
   checkIsFollowing,
   INITIAL_CURATED_POSTS,
 } from './services/firestoreService';
-import { Sparkles, Sprout, Plus, UserPlus, Flame, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
+import { Sparkles, Sprout, Plus, UserPlus, Flame, Loader2, RotateCcw, AlertCircle, Smartphone, Download } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
@@ -48,6 +50,7 @@ const MainApp: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
+  const [isDownloadApkOpen, setIsDownloadApkOpen] = useState(false);
   const [reportingPostId, setReportingPostId] = useState<string | null>(null);
   const [activeProfileUserId, setActiveProfileUserId] = useState<string | null>(null);
   const [targetMessageUserId, setTargetMessageUserId] = useState<string | null>(null);
@@ -201,6 +204,28 @@ const MainApp: React.FC = () => {
         <SplashScreen onFinish={() => setShowSplash(false)} minDurationMs={1600} />
       )}
 
+      {/* Prominent Top Download APK Banner (Mobile & Desktop) */}
+      <div className="w-full bg-gradient-to-r from-[#12372A] via-[#1B5E20] to-[#12372A] text-white py-2 px-3 sm:px-4 border-b border-[#00C853]/30 flex items-center justify-between shadow-xs z-30">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 rounded-lg bg-[#00C853]/25 flex items-center justify-center shrink-0 ring-1 ring-[#00C853]/60">
+            <Smartphone className="w-3.5 h-3.5 text-[#00C853]" />
+          </div>
+          <div className="text-xs truncate">
+            <span className="font-extrabold text-[#69F0AE] mr-1.5">FG TIME Android App:</span>
+            <span className="text-stone-200 hidden sm:inline">Official signed release (v1.2.0 • 18.4 MB). </span>
+            <span className="text-stone-300 text-[11px]">Install for native push whispers & instant leaf feed!</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsDownloadApkOpen(true)}
+          className="ml-2 px-3 py-1.5 rounded-xl bg-[#00C853] hover:bg-[#00E676] text-[#12372A] font-black text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5 text-[#12372A]" />
+          <span>{isApkDownloadAvailable() ? 'Download APK' : 'APK Coming Soon'}</span>
+        </button>
+      </div>
+
       {/* Top Navbar on mobile */}
       <Navbar
         onTabChange={handleTabChange}
@@ -211,6 +236,7 @@ const MainApp: React.FC = () => {
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenDownloadApk={() => setIsDownloadApkOpen(true)}
         unreadNotificationsCount={unreadNotifications}
         unreadMessagesCount={unreadMessages}
       />
@@ -227,6 +253,7 @@ const MainApp: React.FC = () => {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
+          onOpenDownloadApk={() => setIsDownloadApkOpen(true)}
           unreadNotificationsCount={unreadNotifications}
           unreadMessagesCount={unreadMessages}
         />
@@ -529,6 +556,7 @@ const MainApp: React.FC = () => {
         <RightSidebar
           onSelectTag={() => setCurrentTab('explore')}
           onOpenUserProfile={(uId) => handleOpenUserProfile(uId)}
+          onOpenDownloadApk={() => setIsDownloadApkOpen(true)}
         />
       </div>
 
@@ -554,6 +582,11 @@ const MainApp: React.FC = () => {
       </button>
 
       {/* Global Modals */}
+      <DownloadApkModal
+        isOpen={isDownloadApkOpen}
+        onClose={() => setIsDownloadApkOpen(false)}
+      />
+
       <SproutAiAssistantModal
         isOpen={isAiAssistantOpen}
         onClose={() => setIsAiAssistantOpen(false)}
